@@ -1,0 +1,1009 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Money Jar System & Cash Flow Analysis</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            50: '#fef2f2',
+                            100: '#fee2e2',
+                            500: '#ef4444',
+                            600: '#dc2626',
+                            700: '#b91c1c',
+                            800: '#991b1b',
+                            900: '#7f1d1d',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- Google Fonts Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- FontAwesome for icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Chart.js for analytics -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        
+        /* Dedicated PDF Report Export Styles */
+        @media print {
+            .no-print { display: none !important; }
+            
+            /* Explicitly hide Income Input Cards Container in PDF/Print */
+            #income-inputs-container { display: none !important; }
+
+            body { 
+                background: white !important; 
+                color: #111827 !important; 
+                font-size: 10px !important; 
+                -webkit-print-color-adjust: exact !important; 
+                print-color-adjust: exact !important; 
+            }
+            header, footer { display: none !important; }
+            .print-container { width: 100% !important; max-width: 100% !important; padding: 0 !important; margin: 0 !important; space-y: 1.5rem !important; }
+            
+            section { 
+                border: 1px solid #e5e7eb !important; 
+                break-inside: avoid !important; 
+                margin-bottom: 1.25rem !important; 
+                padding: 1rem !important; 
+                box-shadow: none !important; 
+                border-radius: 0.5rem !important; 
+                background-color: #ffffff !important;
+            }
+            
+            input[type="text"], input[type="number"] { 
+                border: none !important; 
+                background: transparent !important; 
+                padding: 0 !important; 
+                font-weight: 600 !important; 
+            }
+
+            .pdf-header { 
+                display: flex !important; 
+                justify-content: space-between; 
+                align-items: center; 
+                border-bottom: 2px solid #dc2626; 
+                padding-bottom: 0.75rem; 
+                margin-bottom: 1.25rem; 
+            }
+
+            /* Optimized Table Styling for Print */
+            table { width: 100% !important; border-collapse: collapse !important; }
+            th, td { padding: 6px 10px !important; font-size: 10px !important; }
+            th { background-color: #f3f4f6 !important; color: #374151 !important; border-bottom: 1px solid #d1d5db !important; }
+            td { border-bottom: 1px solid #f3f4f6 !important; }
+            
+            /* PDF Specific Grid layout adjustments */
+            .grid { display: flex !important; flex-wrap: wrap !important; gap: 0.75rem !important; }
+            .grid > * { flex: 1 1 30% !important; }
+        }
+        .pdf-header { display: none; }
+    </style>
+</head>
+<body class="bg-gray-50 text-gray-800 min-h-full flex flex-col justify-between">
+
+    <!-- Top Navigation Bar -->
+    <header class="bg-white border-b border-gray-200 sticky top-0 z-50 shadow-sm no-print">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+            <div class="flex items-center space-x-3">
+                <div class="w-10 h-10 rounded-xl bg-brand-600 flex items-center justify-center text-white shadow-md shadow-brand-500/20">
+                    <i class="fa-solid fa-vault text-lg"></i>
+                </div>
+                <div>
+                    <h1 class="text-lg font-bold text-gray-900 tracking-tight">Money Jar System</h1>
+                    <p class="text-xs text-gray-500">Cash Flow Analysis & Budget Allocation</p>
+                </div>
+            </div>
+            <div class="flex items-center space-x-2 sm:space-x-3">
+                <button onclick="resetData()" class="inline-flex items-center px-3 py-2 border border-gray-300 text-xs sm:text-sm font-medium rounded-lg text-gray-700 bg-white hover:bg-gray-50 transition shadow-sm">
+                    <i class="fa-solid fa-rotate-right mr-1.5 text-gray-500"></i> Reset
+                </button>
+                <button onclick="exportPDFReport()" class="inline-flex items-center px-4 py-2 text-xs sm:text-sm font-medium rounded-lg text-white bg-brand-600 hover:bg-brand-700 transition shadow-md shadow-brand-600/20">
+                    <i class="fa-solid fa-file-pdf mr-1.5"></i> Export PDF Report
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content Container -->
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 flex-grow w-full space-y-8 print-container">
+
+        <!-- PDF Header Branding (Visible only during Print / PDF Export) -->
+        <div class="pdf-header">
+            <div>
+                <h1 class="text-xl font-bold text-gray-900">PRU LIFE UK &bull; Money Jar Financial Report</h1>
+                <p class="text-xs text-gray-500">Comprehensive Cash Flow Analysis & Asset Allocation Summary</p>
+            </div>
+            <div class="text-right">
+                <p class="text-xs font-semibold text-gray-700">Client: <span id="pdf-client-name-display" class="font-bold text-brand-700">Juan Dela Cruz</span></p>
+                <p class="text-[11px] text-gray-500">Date: <span id="pdf-current-date"></span></p>
+            </div>
+        </div>
+
+        <!-- Notification Banner -->
+        <div id="notification-banner" class="hidden rounded-xl p-4 border flex items-center justify-between transition-all duration-300 shadow-sm no-print">
+            <div class="flex items-center space-x-3">
+                <i id="notification-icon" class="fa-solid text-lg"></i>
+                <span id="notification-text" class="text-sm font-medium"></span>
+            </div>
+            <button onclick="hideNotification()" class="text-gray-400 hover:text-gray-600"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+
+        <!-- SECTION 1: Income Sources & Total Cash Flow Overview -->
+        <section id="section-1" class="bg-white rounded-2xl border border-gray-200 p-6 shadow-sm space-y-6">
+            <div class="flex items-center justify-between border-b border-gray-100 pb-4">
+                <div>
+                    <h2 class="text-lg font-bold text-gray-900 flex items-center">
+                        <span class="w-7 h-7 rounded-lg bg-brand-100 text-brand-700 flex items-center justify-center text-xs font-bold mr-2">1</span>
+                        Income Sources & Cash Flow Summary
+                    </h2>
+                    <p class="text-xs text-gray-500 mt-0.5">Overview of monthly income streams vs total jar allocations.</p>
+                </div>
+                <div class="w-12 h-12 rounded-xl bg-brand-50 flex items-center justify-center text-brand-600 hidden sm:flex no-print">
+                    <i class="fa-solid fa-wallet text-xl"></i>
+                </div>
+            </div>
+
+            <!-- Client Name Input & Income Grid -->
+            <div class="grid grid-cols-1 lg:grid-cols-4 gap-4">
+                <!-- Client Info Card -->
+                <div class="bg-gray-50 rounded-xl p-4 border border-gray-200 flex flex-col justify-between">
+                    <div>
+                        <label class="block text-xs font-semibold text-gray-700 uppercase tracking-wider mb-2">Client Name / Reference</label>
+                        <input type="text" id="client-name" oninput="updateClientName(this.value)" class="w-full px-3.5 py-2.5 text-sm bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-500 focus:border-brand-500 outline-none transition font-medium" placeholder="e.g., Juan Dela Cruz">
+                    </div>
+                    <div class="mt-4 pt-3 border-t border-gray-200/60">
+                        <p class="text-[11px] text-gray-500">Analysis Date: <span id="current-date" class="font-semibold text-gray-700"></span></p>
+                    </div>
+                </div>
+
+                <!-- Income Inputs (Hidden in PDF export) -->
+                <div id="income-inputs-container" class="lg:col-span-3 grid grid-cols-1 sm:grid-cols-3 gap-4 no-print">
+                    <div class="bg-gray-50 rounded-xl p-4 border border-gray-200">
+                        <label class="block text-xs font-semibold text-gray-700 uppercase tracking-wider mb-1">Primary Income (A)</label>
+                        <div class="relative rounded-lg shadow-sm mt-1">
+                            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400 font-semibold">₱</div>
+                            <input type="number" id="income-a" oninput="calculateTotals()" class="block w-full pl-8 pr-3 py-2 text-sm rounded-lg bg-white border border-gray-300 focus:ring-2 focus:ring-brand-500 focus:border-brand-500 outline-none transition" placeholder="0.00">
+                        </div>
+                    </div>
+                    <div class="bg-gray-50 rounded-xl p-4 border border-gray-200">
+                        <label class="block text-xs font-semibold text-gray-700 uppercase tracking-wider mb-1">Secondary Income (B)</label>
+                        <div class="relative rounded-lg shadow-sm mt-1">
+                            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400 font-semibold">₱</div>
+                            <input type="number" id="income-b" oninput="calculateTotals()" class="block w-full pl-8 pr-3 py-2 text-sm rounded-lg bg-white border border-gray-300 focus:ring-2 focus:ring-brand-500 focus:border-brand-500 outline-none transition" placeholder="0.00">
+                        </div>
+                    </div>
+                    <div class="bg-gray-50 rounded-xl p-4 border border-gray-200">
+                        <label class="block text-xs font-semibold text-gray-700 uppercase tracking-wider mb-1">Other Income (C)</label>
+                        <div class="relative rounded-lg shadow-sm mt-1">
+                            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400 font-semibold">₱</div>
+                            <input type="number" id="income-c" oninput="calculateTotals()" class="block w-full pl-8 pr-3 py-2 text-sm rounded-lg bg-white border border-gray-300 focus:ring-2 focus:ring-brand-500 focus:border-brand-500 outline-none transition" placeholder="0.00">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Cash Flow Summary Metric Cards -->
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-2">
+                <div class="bg-white rounded-xl p-4 border border-gray-200 shadow-sm flex items-center justify-between">
+                    <div>
+                        <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider">Total Monthly Income</p>
+                        <p id="summary-total-income" class="text-xl sm:text-2xl font-bold text-gray-900 mt-1">₱0.00</p>
+                    </div>
+                    <div class="w-10 h-10 rounded-xl bg-gray-100 flex items-center justify-center text-gray-600 no-print">
+                        <i class="fa-solid fa-coins"></i>
+                    </div>
+                </div>
+                <div class="bg-white rounded-xl p-4 border border-gray-200 shadow-sm flex items-center justify-between">
+                    <div>
+                        <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider">Overall Expenses / Allocated</p>
+                        <p id="summary-total-allocated" class="text-xl sm:text-2xl font-bold text-brand-600 mt-1">₱0.00</p>
+                    </div>
+                    <div class="w-10 h-10 rounded-xl bg-brand-50 flex items-center justify-center text-brand-600 no-print">
+                        <i class="fa-solid fa-receipt"></i>
+                    </div>
+                </div>
+                <div class="bg-white rounded-xl p-4 border border-gray-200 shadow-sm flex items-center justify-between">
+                    <div>
+                        <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider">Unallocated Fund / Net</p>
+                        <p id="summary-net-flow" class="text-xl sm:text-2xl font-bold text-emerald-600 mt-1">₱0.00</p>
+                    </div>
+                    <div id="net-flow-icon-container" class="w-10 h-10 rounded-xl bg-emerald-50 flex items-center justify-center text-emerald-600 no-print">
+                        <i class="fa-solid fa-scale-balanced"></i>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- SECTION 2: Detailed Jar Expense Management (Hidden in PDF Export) -->
+        <section id="section-2" class="bg-white rounded-2xl border border-gray-200 p-6 shadow-sm space-y-6 no-print">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between border-b border-gray-100 pb-4 gap-4">
+                <div>
+                    <h2 class="text-lg font-bold text-gray-900 flex items-center">
+                        <span class="w-7 h-7 rounded-lg bg-brand-100 text-brand-700 flex items-center justify-center text-xs font-bold mr-2">2</span>
+                        Detailed Jar Expense Management
+                    </h2>
+                    <p class="text-xs text-gray-500 mt-0.5">Customize expense items for each Money Jar across 5 core categories.</p>
+                </div>
+                <!-- Item Count Selector -->
+                <div class="flex items-center space-x-2 bg-gray-50 p-1.5 rounded-xl border border-gray-200">
+                    <span class="text-xs font-semibold text-gray-600 px-2">Row Limit:</span>
+                    <button onclick="setItemLimit(5)" id="limit-btn-5" class="px-2.5 py-1 text-xs font-bold rounded-lg transition">5</button>
+                    <button onclick="setItemLimit(10)" id="limit-btn-10" class="px-2.5 py-1 text-xs font-bold rounded-lg transition">10</button>
+                    <button onclick="setItemLimit(15)" id="limit-btn-15" class="px-2.5 py-1 text-xs font-bold rounded-lg transition">15</button>
+                    <button onclick="setItemLimit(30)" id="limit-btn-30" class="px-2.5 py-1 text-xs font-bold rounded-lg transition">30</button>
+                </div>
+            </div>
+
+            <!-- Jar Tabs Navigation -->
+            <div class="flex flex-wrap gap-2 border-b border-gray-200 pb-3" id="jar-tabs">
+                <!-- Tabs rendered dynamically -->
+            </div>
+
+            <!-- Active Jar Content Panel -->
+            <div id="jar-content-container" class="bg-gray-50/50 rounded-xl border border-gray-200 p-6">
+                <!-- Dynamically populated active jar content -->
+            </div>
+        </section>
+
+        <!-- SECTION 3: 5 Money Jars Breakdown Summary -->
+        <section id="section-3" class="bg-white rounded-2xl border border-gray-200 p-6 shadow-sm space-y-6">
+            <div class="flex items-center justify-between border-b border-gray-100 pb-4">
+                <div>
+                    <h2 class="text-lg font-bold text-gray-900 flex items-center">
+                        <span class="w-7 h-7 rounded-lg bg-brand-100 text-brand-700 flex items-center justify-center text-xs font-bold mr-2">3</span>
+                        5 Money Jars Breakdown Summary
+                    </h2>
+                    <p class="text-xs text-gray-500 mt-0.5">System recommended allocations vs actual expense distribution.</p>
+                </div>
+                <div class="w-12 h-12 rounded-xl bg-brand-50 flex items-center justify-center text-brand-600 hidden sm:flex no-print">
+                    <i class="fa-solid fa-table-cells text-xl"></i>
+                </div>
+            </div>
+
+            <div class="overflow-x-auto border border-gray-200 rounded-xl">
+                <table class="min-w-full divide-y divide-gray-200 text-sm">
+                    <thead>
+                        <tr class="bg-gray-100 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">
+                            <th class="px-4 py-3.5">Money Jar Category</th>
+                            <th class="px-4 py-3.5 text-center">Ideal %</th>
+                            <th class="px-4 py-3.5 text-right">Ideal Target (₱)</th>
+                            <th class="px-4 py-3.5 text-right">Actual Subtotal (₱)</th>
+                            <th class="px-4 py-3.5 text-center">Actual %</th>
+                            <th class="px-4 py-3.5 text-right">Variance / Diff (₱)</th>
+                        </tr>
+                    </thead>
+                    <tbody id="breakdown-table-body" class="divide-y divide-gray-200 bg-white">
+                        <!-- Populated dynamically -->
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- SECTION 4: Visual Cash Flow Analytics -->
+        <section id="section-4" class="bg-white rounded-2xl border border-gray-200 p-6 shadow-sm space-y-6">
+            <div class="flex items-center justify-between border-b border-gray-100 pb-4">
+                <div>
+                    <h2 class="text-lg font-bold text-gray-900 flex items-center">
+                        <span class="w-7 h-7 rounded-lg bg-brand-100 text-brand-700 flex items-center justify-center text-xs font-bold mr-2">4</span>
+                        Visual Cash Flow Analytics
+                    </h2>
+                    <p class="text-xs text-gray-500 mt-0.5">Graphical analysis of jar share distribution & target benchmarks.</p>
+                </div>
+                <div class="w-12 h-12 rounded-xl bg-brand-50 flex items-center justify-center text-brand-600 hidden sm:flex no-print">
+                    <i class="fa-solid fa-chart-pie text-xl"></i>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 items-center">
+                <!-- Doughnut Chart Container -->
+                <div class="h-64 sm:h-80 flex justify-center items-center relative bg-gray-50 rounded-2xl p-4 border border-gray-200/80">
+                    <canvas id="jarChart"></canvas>
+                </div>
+                <!-- Visual Progress Bars / Cards -->
+                <div class="space-y-3" id="analytics-progress-bars">
+                    <!-- Populated dynamically -->
+                </div>
+            </div>
+        </section>
+
+        <!-- SECTION 5: Financial Advisor -->
+        <section id="section-5" class="bg-white rounded-2xl border border-gray-200 p-6 shadow-sm space-y-6">
+            <div class="flex items-center justify-between border-b border-gray-100 pb-4">
+                <div>
+                    <h2 class="text-lg font-bold text-gray-900 flex items-center">
+                        <span class="w-7 h-7 rounded-lg bg-brand-100 text-brand-700 flex items-center justify-center text-xs font-bold mr-2">5</span>
+                        Financial Advisor Feedback & Rule Analysis
+                    </h2>
+                    <p class="text-xs text-gray-500 mt-0.5">Real-time health feedback & balance rule analysis.</p>
+                </div>
+                <div class="w-12 h-12 rounded-xl bg-brand-50 flex items-center justify-center text-brand-600 hidden sm:flex no-print">
+                    <i class="fa-solid fa-user-tie text-xl"></i>
+                </div>
+            </div>
+
+            <!-- Advice Container -->
+            <div id="advisor-feedback-container" class="space-y-3">
+                <!-- Populated dynamically -->
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-white border-t border-gray-200 mt-16 py-6 text-center text-xs text-gray-500 no-print">
+        <p>Money Jar System & Cash Flow Analysis App &bull; Clean White & Crimson Red Theme &bull; All data saved locally.</p>
+    </footer>
+
+    <!-- Main JavaScript Logic -->
+    <script>
+        // Default application state
+        let appData = {
+            clientName: "Juan Dela Cruz",
+            incomes: { a: 50000, b: 0, c: 0 },
+            activeItemLimit: 5, // 5, 10, 15, or 30
+            idealPercentages: [50, 20, 20, 10, 0], // Non-Negotiable, Negotiable, EF/Savings, Insurance, Charity
+            jars: [
+                {
+                    id: 0,
+                    name: "Non-Negotiable (Needs & Bills)",
+                    subtitle: "Housing, Utilities, Groceries, Loan Repayments",
+                    badgeColor: "bg-red-100 text-red-800",
+                    items: [
+                        { name: "Rent / Mortgage", amount: 15000 },
+                        { name: "Utilities (Electric, Water, Internet)", amount: 4000 },
+                        { name: "Groceries & Supplies", amount: 6000 },
+                        { name: "Transportation / Gas", amount: 3000 },
+                        { name: "Debt / Loan Amortization", amount: 2000 }
+                    ]
+                },
+                {
+                    id: 1,
+                    name: "Negotiable (Wants & Lifestyle)",
+                    subtitle: "Dining Out, Entertainment, Subscriptions, Shopping",
+                    badgeColor: "bg-amber-100 text-amber-800",
+                    items: [
+                        { name: "Dining Out & Leisure", amount: 5000 },
+                        { name: "Streaming & Subscriptions", amount: 1000 },
+                        { name: "Shopping & Hobbies", amount: 4000 },
+                        { name: "", amount: 0 },
+                        { name: "", amount: 0 }
+                    ]
+                },
+                {
+                    id: 2,
+                    name: "EF / Savings / Investments",
+                    subtitle: "Emergency Fund Builder, Stocks, Mutual Funds, Crypto",
+                    badgeColor: "bg-emerald-100 text-emerald-800",
+                    items: [
+                        { name: "Emergency Fund Buffer", amount: 6000 },
+                        { name: "Mutual Funds / Stocks", amount: 3000 },
+                        { name: "High-Yield Savings", amount: 1000 },
+                        { name: "", amount: 0 },
+                        { name: "", amount: 0 }
+                    ]
+                },
+                {
+                    id: 3,
+                    name: "Insurance (Protection)",
+                    subtitle: "Health Insurance, HMO, Life & Disability Protection",
+                    badgeColor: "bg-blue-100 text-blue-800",
+                    items: [
+                        { name: "Health Insurance / HMO", amount: 3500 },
+                        { name: "Term / Variable Life Policy", amount: 1500 },
+                        { name: "", amount: 0 },
+                        { name: "", amount: 0 },
+                        { name: "", amount: 0 }
+                    ]
+                },
+                {
+                    id: 4,
+                    name: "Charity & Tithes",
+                    subtitle: "Church Tithes, Community Donations & Outreach",
+                    badgeColor: "bg-purple-100 text-purple-800",
+                    items: [
+                        { name: "Church Tithes / Offerings", amount: 0 },
+                        { name: "", amount: 0 },
+                        { name: "", amount: 0 },
+                        { name: "", amount: 0 },
+                        { name: "", amount: 0 }
+                    ]
+                }
+            ]
+        };
+
+        let activeJarIndex = 0;
+        let jarChartInstance = null;
+
+        // Load data from localStorage
+        function loadData() {
+            const saved = localStorage.getItem('pruMoneyJarAppData');
+            if (saved) {
+                try {
+                    appData = JSON.parse(saved);
+                } catch (e) {
+                    console.error("Could not parse saved data", e);
+                }
+            }
+
+            document.getElementById('client-name').value = appData.clientName || "";
+            document.getElementById('income-a').value = appData.incomes.a;
+            document.getElementById('income-b').value = appData.incomes.b;
+            document.getElementById('income-c').value = appData.incomes.c;
+
+            // Set current date string
+            const options = { year: 'numeric', month: 'long', day: 'numeric' };
+            const dateStr = new Date().toLocaleDateString('en-US', options);
+            document.getElementById('current-date').innerText = dateStr;
+            const pdfDateEl = document.getElementById('pdf-current-date');
+            if (pdfDateEl) pdfDateEl.innerText = dateStr;
+            const pdfClientEl = document.getElementById('pdf-client-name-display');
+            if (pdfClientEl) pdfClientEl.innerText = appData.clientName || "Juan Dela Cruz";
+
+            updateLimitButtonsUI();
+        }
+
+        function saveData() {
+            localStorage.setItem('pruMoneyJarAppData', JSON.stringify(appData));
+        }
+
+        function resetData() {
+            if (confirm("Are you sure you want to reset all data to default values?")) {
+                localStorage.removeItem('pruMoneyJarAppData');
+                location.reload();
+            }
+        }
+
+        function exportPDFReport() {
+            // Update PDF display name and date before printing/exporting
+            const clientNameInput = document.getElementById('client-name').value || "Juan Dela Cruz";
+            const pdfClientEl = document.getElementById('pdf-client-name-display');
+            if (pdfClientEl) pdfClientEl.innerText = clientNameInput;
+
+            const options = { year: 'numeric', month: 'long', day: 'numeric' };
+            const dateStr = new Date().toLocaleDateString('en-US', options);
+            const pdfDateEl = document.getElementById('pdf-current-date');
+            if (pdfDateEl) pdfDateEl.innerText = dateStr;
+            
+            window.print();
+        }
+
+        // Notification helper
+        function showNotification(message, type = 'success') {
+            const banner = document.getElementById('notification-banner');
+            const text = document.getElementById('notification-text');
+            const icon = document.getElementById('notification-icon');
+
+            text.innerText = message;
+            banner.className = "rounded-xl p-4 border flex items-center justify-between transition-all duration-300 shadow-sm ";
+            
+            if (type === 'success') {
+                banner.classList.add('bg-emerald-50', 'border-emerald-200', 'text-emerald-800');
+                icon.className = "fa-solid fa-circle-check text-emerald-600 text-lg mr-2";
+            } else if (type === 'warning') {
+                banner.classList.add('bg-amber-50', 'border-amber-200', 'text-amber-800');
+                icon.className = "fa-solid fa-triangle-exclamation text-amber-600 text-lg mr-2";
+            } else {
+                banner.classList.add('bg-red-50', 'border-red-200', 'text-red-800');
+                icon.className = "fa-solid fa-circle-xmark text-red-600 text-lg mr-2";
+            }
+
+            banner.classList.remove('hidden');
+            setTimeout(() => { hideNotification(); }, 5000);
+        }
+
+        function hideNotification() {
+            document.getElementById('notification-banner').classList.add('hidden');
+        }
+
+        function updateClientName(val) {
+            appData.clientName = val;
+            const pdfClientEl = document.getElementById('pdf-client-name-display');
+            if (pdfClientEl) pdfClientEl.innerText = val || "Juan Dela Cruz";
+            saveData();
+        }
+
+        function setItemLimit(limit) {
+            appData.activeItemLimit = limit;
+            
+            // Ensure each jar has at least 'limit' items array length
+            appData.jars.forEach(jar => {
+                while (jar.items.length < limit) {
+                    jar.items.push({ name: "", amount: 0 });
+                }
+            });
+
+            saveData();
+            updateLimitButtonsUI();
+            updateAllCalculations();
+        }
+
+        function updateLimitButtonsUI() {
+            [5, 10, 15, 30].forEach(l => {
+                const btn = document.getElementById(`limit-btn-${l}`);
+                if (!btn) return;
+                if (l === appData.activeItemLimit) {
+                    btn.className = "px-2.5 py-1 text-xs font-bold rounded-lg bg-brand-600 text-white shadow-sm";
+                } else {
+                    btn.className = "px-2.5 py-1 text-xs font-bold rounded-lg bg-white text-gray-700 hover:bg-gray-100 border border-gray-200";
+                }
+            });
+        }
+
+        function calculateTotals() {
+            const a = parseFloat(document.getElementById('income-a').value) || 0;
+            const b = parseFloat(document.getElementById('income-b').value) || 0;
+            const c = parseFloat(document.getElementById('income-c').value) || 0;
+
+            appData.incomes = { a, b, c };
+            saveData();
+            updateSummaryAndAnalyticsOnly();
+        }
+
+        // Master calculation & UI rendering router
+        function updateAllCalculations() {
+            const totalIncome = appData.incomes.a + appData.incomes.b + appData.incomes.c;
+            document.getElementById('summary-total-income').innerText = formatCurrency(totalIncome);
+
+            let totalAllocated = 0;
+            let jarSubtotals = appData.jars.map(jar => {
+                const sub = jar.items.reduce((acc, item) => acc + (parseFloat(item.amount) || 0), 0);
+                totalAllocated += sub;
+                return sub;
+            });
+
+            document.getElementById('summary-total-allocated').innerText = formatCurrency(totalAllocated);
+
+            const netFlow = totalIncome - totalAllocated;
+            const netFlowEl = document.getElementById('summary-net-flow');
+            const netFlowIconContainer = document.getElementById('net-flow-icon-container');
+            
+            netFlowEl.innerText = formatCurrency(netFlow);
+            if (netFlow >= 0) {
+                netFlowEl.className = "text-xl sm:text-2xl font-bold text-emerald-600 mt-1";
+                netFlowIconContainer.className = "w-10 h-10 rounded-xl bg-emerald-50 flex items-center justify-center text-emerald-600";
+                netFlowIconContainer.innerHTML = '<i class="fa-solid fa-scale-balanced"></i>';
+            } else {
+                netFlowEl.className = "text-xl sm:text-2xl font-bold text-red-600 mt-1";
+                netFlowIconContainer.className = "w-10 h-10 rounded-xl bg-red-50 flex items-center justify-center text-red-600";
+                netFlowIconContainer.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i>';
+            }
+
+            renderTabs();
+            renderActiveJarContent(jarSubtotals, totalIncome);
+            renderBreakdownTable(jarSubtotals, totalIncome);
+            renderAnalytics(jarSubtotals, totalIncome);
+            renderAdvisorFeedback(jarSubtotals, totalIncome);
+            updateChart(jarSubtotals);
+        }
+
+        // Optimized lightweight calculation update when typing amounts (Prevents input focus loss)
+        function updateSummaryAndAnalyticsOnly() {
+            const totalIncome = appData.incomes.a + appData.incomes.b + appData.incomes.c;
+            document.getElementById('summary-total-income').innerText = formatCurrency(totalIncome);
+
+            let totalAllocated = 0;
+            let jarSubtotals = appData.jars.map(jar => {
+                const sub = jar.items.reduce((acc, item) => acc + (parseFloat(item.amount) || 0), 0);
+                totalAllocated += sub;
+                return sub;
+            });
+
+            document.getElementById('summary-total-allocated').innerText = formatCurrency(totalAllocated);
+
+            const netFlow = totalIncome - totalAllocated;
+            const netFlowEl = document.getElementById('summary-net-flow');
+            const netFlowIconContainer = document.getElementById('net-flow-icon-container');
+            
+            netFlowEl.innerText = formatCurrency(netFlow);
+            if (netFlow >= 0) {
+                netFlowEl.className = "text-xl sm:text-2xl font-bold text-emerald-600 mt-1";
+                netFlowIconContainer.className = "w-10 h-10 rounded-xl bg-emerald-50 flex items-center justify-center text-emerald-600";
+                netFlowIconContainer.innerHTML = '<i class="fa-solid fa-scale-balanced"></i>';
+            } else {
+                netFlowEl.className = "text-xl sm:text-2xl font-bold text-red-600 mt-1";
+                netFlowIconContainer.className = "w-10 h-10 rounded-xl bg-red-50 flex items-center justify-center text-red-600";
+                netFlowIconContainer.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i>';
+            }
+
+            renderTabs();
+            updateActiveJarHeader(jarSubtotals, totalIncome);
+            renderBreakdownTable(jarSubtotals, totalIncome);
+            renderAnalytics(jarSubtotals, totalIncome);
+            renderAdvisorFeedback(jarSubtotals, totalIncome);
+            updateChart(jarSubtotals);
+        }
+
+        function formatCurrency(val) {
+            return '₱' + val.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        }
+
+        // Render Section 2 Tabs
+        function renderTabs() {
+            const container = document.getElementById('jar-tabs');
+            container.innerHTML = '';
+
+            appData.jars.forEach((jar, idx) => {
+                const sub = jar.items.reduce((acc, item) => acc + (parseFloat(item.amount) || 0), 0);
+                const isActive = idx === activeJarIndex;
+                
+                const btn = document.createElement('button');
+                btn.className = `px-3.5 py-2 text-xs sm:text-sm font-semibold rounded-xl transition flex items-center space-x-2 ${isActive ? 'bg-brand-600 text-white shadow-md shadow-brand-600/20' : 'bg-white text-gray-700 border border-gray-200 hover:bg-gray-50'}`;
+                btn.innerHTML = `<span>${idx + 1}. ${jar.name.split(' ')[0]}</span> <span class="px-2 py-0.5 text-[10px] rounded-full ${isActive ? 'bg-brand-700 text-white' : 'bg-gray-100 text-gray-700'}">${formatCurrency(sub)}</span>`;
+                btn.onclick = () => { activeJarIndex = idx; updateAllCalculations(); };
+                container.appendChild(btn);
+            });
+        }
+
+        // Render Section 2 Active Jar Panel
+        function renderActiveJarContent(jarSubtotals, totalIncome) {
+            const jar = appData.jars[activeJarIndex];
+            const sub = jarSubtotals[activeJarIndex];
+            const idealPct = appData.idealPercentages[activeJarIndex];
+            const actualPct = totalIncome > 0 ? (sub / totalIncome) * 100 : 0;
+
+            const container = document.getElementById('jar-content-container');
+            
+            let html = `
+                <div class="flex flex-col md:flex-row md:items-center justify-between pb-4 border-b border-gray-200 gap-4">
+                    <div>
+                        <div class="flex items-center space-x-2">
+                            <span class="px-2.5 py-1 text-xs font-bold rounded-lg ${jar.badgeColor}">Jar #${activeJarIndex + 1}</span>
+                            <h3 class="text-base font-bold text-gray-900">${jar.name}</h3>
+                        </div>
+                        <p class="text-xs text-gray-500 mt-1">${jar.subtitle}</p>
+                    </div>
+                    <div class="flex items-center space-x-3">
+                        <div class="bg-white px-3.5 py-2 rounded-xl border border-gray-200 text-right shadow-sm">
+                            <span class="text-[10px] uppercase font-semibold text-gray-500 block">Subtotal</span>
+                            <span id="active-jar-subtotal" class="text-base font-bold text-brand-600">${formatCurrency(sub)}</span>
+                        </div>
+                        <div class="bg-white px-3.5 py-2 rounded-xl border border-gray-200 text-right shadow-sm">
+                            <span class="text-[10px] uppercase font-semibold text-gray-500 block">Actual / Ideal</span>
+                            <span id="active-jar-ratio" class="text-xs font-bold text-gray-800">${actualPct.toFixed(1)}% <span class="text-gray-400">(${idealPct}%)</span></span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Itemizer Table -->
+                <div class="mt-4 overflow-x-auto bg-white rounded-xl border border-gray-200 shadow-sm">
+                    <table class="min-w-full divide-y divide-gray-200 text-sm">
+                        <thead>
+                            <tr class="bg-gray-50 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                                <th class="px-4 py-3 rounded-l-lg w-3/5">Expense Item Description</th>
+                                <th class="px-4 py-3 rounded-r-lg w-2/5">Monthly Amount (₱)</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-gray-100">
+            `;
+
+            const limit = appData.activeItemLimit;
+            for (let itemIdx = 0; itemIdx < limit; itemIdx++) {
+                if (!jar.items[itemIdx]) {
+                    jar.items[itemIdx] = { name: "", amount: 0 };
+                }
+                const item = jar.items[itemIdx];
+                html += `
+                    <tr class="hover:bg-gray-50/50 transition">
+                        <td class="px-4 py-2.5">
+                            <input type="text" value="${escapeHtml(item.name)}" oninput="updateItemName(${activeJarIndex}, ${itemIdx}, this.value)" class="w-full bg-transparent border-b border-transparent hover:border-gray-300 focus:border-brand-500 focus:outline-none py-1 text-gray-900 text-sm" placeholder="Enter expense item name...">
+                        </td>
+                        <td class="px-4 py-2.5">
+                            <div class="relative rounded-lg shadow-sm max-w-xs">
+                                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400 font-medium">₱</div>
+                                <input type="number" value="${item.amount || ''}" oninput="updateItemAmount(${activeJarIndex}, ${itemIdx}, this.value)" class="w-full pl-7 pr-3 py-1.5 text-sm rounded-lg bg-gray-50/50 border border-gray-200 focus:bg-white focus:ring-2 focus:ring-brand-500 outline-none" placeholder="0.00">
+                            </div>
+                        </td>
+                    </tr>
+                `;
+            }
+
+            html += `
+                        </tbody>
+                    </table>
+                </div>
+                <div class="mt-3 flex items-center justify-between text-xs text-gray-500 px-1">
+                    <span>Showing ${limit} rows (Adjust row limit above)</span>
+                    <span>Changes save automatically</span>
+                </div>
+            `;
+
+            container.innerHTML = html;
+        }
+
+        function updateActiveJarHeader(jarSubtotals, totalIncome) {
+            const sub = jarSubtotals[activeJarIndex];
+            const idealPct = appData.idealPercentages[activeJarIndex];
+            const actualPct = totalIncome > 0 ? (sub / totalIncome) * 100 : 0;
+
+            const subEl = document.getElementById('active-jar-subtotal');
+            const ratioEl = document.getElementById('active-jar-ratio');
+            if (subEl) subEl.innerText = formatCurrency(sub);
+            if (ratioEl) ratioEl.innerHTML = `${actualPct.toFixed(1)}% <span class="text-gray-400">(${idealPct}%)</span>`;
+        }
+
+        function updateItemName(jarIdx, itemIdx, val) {
+            appData.jars[jarIdx].items[itemIdx].name = val;
+            saveData();
+        }
+
+        function updateItemAmount(jarIdx, itemIdx, val) {
+            appData.jars[jarIdx].items[itemIdx].amount = parseFloat(val) || 0;
+            saveData();
+            updateSummaryAndAnalyticsOnly();
+        }
+
+        function escapeHtml(str) {
+            if (!str) return '';
+            return str.replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+        }
+
+        // Render Section 3 Breakdown Table (Updated PDF Friendly Styling)
+        function renderBreakdownTable(jarSubtotals, totalIncome) {
+            const tbody = document.getElementById('breakdown-table-body');
+            tbody.innerHTML = '';
+
+            let grandTotalIdeal = 0;
+            let grandTotalActual = 0;
+
+            appData.jars.forEach((jar, idx) => {
+                const idealPct = appData.idealPercentages[idx];
+                const idealAmount = (totalIncome * idealPct) / 100;
+                const sub = jarSubtotals[idx];
+                const actualPct = totalIncome > 0 ? (sub / totalIncome) * 100 : 0;
+                
+                grandTotalIdeal += idealAmount;
+                grandTotalActual += sub;
+
+                // Variance rule: Negative when actual > ideal, Positive when ideal > actual
+                const variance = idealAmount - sub;
+
+                const row = document.createElement('tr');
+                row.className = "hover:bg-gray-50/80 transition";
+                row.innerHTML = `
+                    <td class="px-4 py-3 font-medium text-gray-900">
+                        <div class="flex items-center space-x-2">
+                            <span class="w-3 h-3 rounded-full flex-shrink-0" style="background-color: ${getJarColor(idx)}"></span>
+                            <span>${idx + 1}. ${jar.name}</span>
+                        </div>
+                    </td>
+                    <td class="px-4 py-3 text-center font-semibold text-gray-700">${idealPct}%</td>
+                    <td class="px-4 py-3 text-right font-medium text-gray-800">${formatCurrency(idealAmount)}</td>
+                    <td class="px-4 py-3 text-right font-bold text-brand-600">${formatCurrency(sub)}</td>
+                    <td class="px-4 py-3 text-center font-semibold text-gray-800">${actualPct.toFixed(1)}%</td>
+                    <td class="px-4 py-3 text-right font-semibold ${variance < 0 ? 'text-red-600' : 'text-emerald-600'}">${variance > 0 ? '+' : ''}${formatCurrency(variance)}</td>
+                `;
+                tbody.appendChild(row);
+            });
+
+            // Add Total Summary Row
+            const totalVariance = grandTotalIdeal - grandTotalActual;
+            const totalActualPct = totalIncome > 0 ? (grandTotalActual / totalIncome) * 100 : 0;
+            const summaryRow = document.createElement('tr');
+            summaryRow.className = "bg-gray-100 font-bold text-gray-900 border-t-2 border-gray-300";
+            summaryRow.innerHTML = `
+                <td class="px-4 py-3">TOTAL CASH FLOW ALLOCATION</td>
+                <td class="px-4 py-3 text-center">100%</td>
+                <td class="px-4 py-3 text-right">${formatCurrency(grandTotalIdeal)}</td>
+                <td class="px-4 py-3 text-right text-brand-700">${formatCurrency(grandTotalActual)}</td>
+                <td class="px-4 py-3 text-center">${totalActualPct.toFixed(1)}%</td>
+                <td class="px-4 py-3 text-right ${totalVariance < 0 ? 'text-red-600' : 'text-emerald-600'}">${totalVariance > 0 ? '+' : ''}${formatCurrency(totalVariance)}</td>
+            `;
+            tbody.appendChild(summaryRow);
+        }
+
+        function getJarColor(idx) {
+            const colors = ['#dc2626', '#f59e0b', '#10b981', '#3b82f6', '#8b5cf6'];
+            return colors[idx] || '#6b7280';
+        }
+
+        // Render Section 4 Visual Analytics
+        function renderAnalytics(jarSubtotals, totalIncome) {
+            const container = document.getElementById('analytics-progress-bars');
+            container.innerHTML = '';
+
+            appData.jars.forEach((jar, idx) => {
+                const sub = jarSubtotals[idx];
+                const idealPct = appData.idealPercentages[idx];
+                const actualPct = totalIncome > 0 ? (sub / totalIncome) * 100 : 0;
+                
+                const card = document.createElement('div');
+                card.className = "bg-gray-50 rounded-xl p-3 border border-gray-200 space-y-1.5";
+                card.innerHTML = `
+                    <div class="flex items-center justify-between text-xs">
+                        <span class="font-bold text-gray-900">${idx + 1}. ${jar.name}</span>
+                        <span class="font-semibold text-gray-700">${formatCurrency(sub)} (${actualPct.toFixed(1)}% / Ideal: ${idealPct}%)</span>
+                    </div>
+                    <div class="w-full bg-gray-200 rounded-full h-2 overflow-hidden">
+                        <div class="h-2 rounded-full transition-all duration-500" style="width: ${Math.min(actualPct, 100)}%; background-color: ${getJarColor(idx)}"></div>
+                    </div>
+                `;
+                container.appendChild(card);
+            });
+        }
+
+        // Render Section 5 Financial Advisor Feedback & Rules
+        function renderAdvisorFeedback(jarSubtotals, totalIncome) {
+            const container = document.getElementById('advisor-feedback-container');
+            container.innerHTML = '';
+
+            if (totalIncome === 0) {
+                container.innerHTML = `
+                    <div class="p-4 rounded-xl bg-gray-50 border border-gray-200 text-gray-500 text-sm flex items-center space-x-3">
+                        <i class="fa-solid fa-circle-info text-brand-600 text-lg"></i>
+                        <span>Please enter your income details in Section 1 to receive a comprehensive Financial Advisor analysis.</span>
+                    </div>
+                `;
+                return;
+            }
+
+            const needsSub = jarSubtotals[0];
+            const wantsSub = jarSubtotals[1];
+            const savingsSub = jarSubtotals[2];
+            const insuranceSub = jarSubtotals[3];
+            const charitySub = jarSubtotals[4];
+            
+            const needsPct = (needsSub / totalIncome) * 100;
+            const savingsPct = (savingsSub / totalIncome) * 100;
+            const insurancePct = (insuranceSub / totalIncome) * 100;
+            const totalAllocated = needsSub + wantsSub + savingsSub + insuranceSub + charitySub;
+            const unallocated = totalIncome - totalAllocated;
+
+            let feedbacks = [];
+
+            if (needsPct > 55) {
+                feedbacks.push({
+                    type: 'warning',
+                    title: 'High Needs / Fixed Expenses Alert',
+                    text: `Your Non-Negotiable (Needs) jar takes up ${needsPct.toFixed(1)}% of your income (above standard 50% benchmark). Consider reviewing fixed obligations or increasing primary income.`
+                });
+            } else {
+                feedbacks.push({
+                    type: 'success',
+                    title: 'Healthy Needs Allocation',
+                    text: `Your Non-Negotiable needs are at ${needsPct.toFixed(1)}%, which is well-managed within the recommended 50% benchmark.`
+                });
+            }
+
+            if (insurancePct < 10) {
+                feedbacks.push({
+                    type: 'warning',
+                    title: 'Income Protection Gap (Insurance)',
+                    text: `Your insurance allocation is currently at ${insurancePct.toFixed(1)}% (ideal target is 10%). Strengthening medical and life protection ensures financial security.`
+                });
+            } else {
+                feedbacks.push({
+                    type: 'success',
+                    title: 'Robust Insurance Coverage',
+                    text: `Praise-worthy! Your insurance protection is at ${insurancePct.toFixed(1)}%, establishing a reliable safety net.`
+                });
+            }
+
+            if (savingsPct < 20) {
+                feedbacks.push({
+                    type: 'warning',
+                    title: 'Savings & Emergency Fund Growth',
+                    text: `Your savings and investments fund is at ${savingsPct.toFixed(1)}% (target is 20%). Building liquid assets ensures long-term wealth compounding.`
+                });
+            } else {
+                feedbacks.push({
+                    type: 'success',
+                    title: 'Strong Wealth Building',
+                    text: `Great discipline! Your savings and investment rate is ${savingsPct.toFixed(1)}%, supporting robust future growth.`
+                });
+            }
+
+            if (Math.abs(unallocated) > 10) {
+                if (unallocated > 0) {
+                    feedbacks.push({
+                        type: 'info',
+                        title: 'Surplus Unallocated Funds',
+                        text: `You have ${formatCurrency(unallocated)} unallocated in your monthly cash flow. Consider channeling this surplus into your Emergency Fund or Investments jar.`
+                    });
+                } else {
+                    feedbacks.push({
+                        type: 'danger',
+                        title: 'Budget Deficit (Over Allocated)',
+                        text: `Your total expenses exceed your income by ${formatCurrency(Math.abs(unallocated))}. Adjust negotiable wants to achieve a balanced cash flow.`
+                    });
+                }
+            } else {
+                feedbacks.push({
+                    type: 'success',
+                    title: 'Balanced Cash Flow',
+                    text: `Your cash flow is balanced with zero unallocated leakage. Every peso has a designated purpose!`
+                });
+            }
+
+            feedbacks.forEach(fb => {
+                let borderClass = 'border-emerald-200 bg-emerald-50 text-emerald-900';
+                let iconClass = 'fa-circle-check text-emerald-600';
+                if (fb.type === 'warning') {
+                    borderClass = 'border-amber-200 bg-amber-50 text-amber-900';
+                    iconClass = 'fa-triangle-exclamation text-amber-600';
+                } else if (fb.type === 'danger') {
+                    borderClass = 'border-red-200 bg-red-50 text-red-900';
+                    iconClass = 'fa-circle-xmark text-red-600';
+                } else if (fb.type === 'info') {
+                    borderClass = 'border-blue-200 bg-blue-50 text-blue-900';
+                    iconClass = 'fa-circle-info text-blue-600';
+                }
+
+                const card = document.createElement('div');
+                card.className = `p-3 rounded-xl border ${borderClass} flex items-start space-x-3 shadow-sm`;
+                card.innerHTML = `
+                    <div class="mt-0.5"><i class="fa-solid ${iconClass} text-base"></i></div>
+                    <div>
+                        <h4 class="text-xs font-bold">${fb.title}</h4>
+                        <p class="text-xs mt-0.5 leading-relaxed opacity-90">${fb.text}</p>
+                    </div>
+                `;
+                container.appendChild(card);
+            });
+        }
+
+        // Initialize Chart.js Doughnut
+        function updateChart(jarSubtotals) {
+            const ctx = document.getElementById('jarChart').getContext('2d');
+            const dataLabels = appData.jars.map(j => j.name.split(' ')[0]);
+            
+            if (jarChartInstance) {
+                jarChartInstance.data.datasets[0].data = jarSubtotals;
+                jarChartInstance.update();
+                return;
+            }
+
+            jarChartInstance = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: dataLabels,
+                    datasets: [{
+                        data: jarSubtotals,
+                        backgroundColor: ['#dc2626', '#f59e0b', '#10b981', '#3b82f6', '#8b5cf6'],
+                        borderWidth: 2,
+                        borderColor: '#ffffff'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: { boxWidth: 10, font: { size: 10, family: 'Inter' } }
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    let label = context.label || '';
+                                    let value = context.raw || 0;
+                                    let total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                    let percentage = total > 0 ? ((value / total) * 100).toFixed(1) + '%' : '0%';
+                                    return ` ${label}: ₱${value.toLocaleString()} (${percentage})`;
+                                }
+                            }
+                        }
+                    },
+                    cutout: '65%'
+                }
+            });
+        }
+
+        // Run on load
+        window.onload = function() {
+            loadData();
+            updateAllCalculations();
+        };
+    </script>
+</body>
+</html>
